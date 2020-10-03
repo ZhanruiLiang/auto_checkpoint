@@ -13,19 +13,38 @@ import git
 class UsageError(Exception):
     pass
 
-def watch(path: str, init_if_not_exist: bool = True, interval_secs: int = 120):
+def configure_logger():
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setLevel(logging.INFO)
+    fmt = logging.Formatter('%(asctime)s|%(name)s|%(levelname)s: %(message)s')
+    handler.setFormatter(fmt)
+    logger.addHandler(handler)
+    return logger
+
+LOG = configure_logger()
+
+def watch(path: str, interval_secs: int, init_if_not_exist: bool = True):
     repo = get_repo(path, init_if_not_exist)
+    LOG.info('Watching %s, refresh interval %ds', path, interval_secs)
     while True:
+        LOG.info('Scanning...')
+        updated = False
         try:
             files_to_track = list(filter(should_track, repo.untracked_files))
             repo.index.add(files_to_track)
             if repo.index.diff(None):
-                msg = make_commit_message()
                 repo.git.add('-u')
+            if not has_commit(repo) or repo.index.diff('HEAD'):
+                msg = make_commit_message()
                 repo.index.commit(msg)
-                logging.info('New commit made: %s', msg)
+                LOG.info('New commit made: %s', msg)
+                updated = True
         except Exception as e:
-            logging.error(e)
+            LOG.error(e)
+        if not updated:
+            LOG.info('No changes were made')
         time.sleep(interval_secs)
 
 def get_repo(path: str, init_if_not_exist=True) -> git.Repo:
@@ -33,8 +52,9 @@ def get_repo(path: str, init_if_not_exist=True) -> git.Repo:
         return git.Repo(path)
     except git.InvalidGitRepositoryError:
         if init_if_not_exist:
-            logging.info('Initializing new repo...')
-            return git.Repo.init(path)
+            LOG.info('Initializing new repo...')
+            repo = git.Repo.init(path)
+            return repo
         raise UsageError(f'{path} is not a git directory')
 
 def make_commit_message(now: Optional[datetime.datetime] = None):
@@ -50,12 +70,19 @@ def should_track(subpath: str) -> bool:
             return False
     return True
 
+def has_commit(repo: git.Repo) -> bool:
+    try:
+        repo.commit()
+        return True
+    except ValueError:
+        return False
+
 def main(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('path', metavar='PATH', type=str, help='The path to watch')
-    parser.add_argument('--interval', type=int, help='The refresh interval in seconds')
+    parser.add_argument('--interval', type=int, default=30, help='The refresh interval in seconds')
     args = parser.parse_args(argv)
-    watch(args.path, interval_secs=args.interval)
+    watch(args.path, args.interval)
 
 if __name__ == '__main__':
-    main(sys.argv)
+    main(sys.argv[1:])
