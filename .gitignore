@@ -3,3 +3,6 @@ __pycache__
 .pytype
 .vscode
 .*.sw[opn]
+build
+dist
+*.egg-info

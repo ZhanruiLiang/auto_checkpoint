@@ -1,7 +1,7 @@
 import datetime
 import unittest
 
-import auto_checkpoint
+from auto_checkpoint import auto_checkpoint
 
 class AutoCheckpointTest(unittest.TestCase):
 

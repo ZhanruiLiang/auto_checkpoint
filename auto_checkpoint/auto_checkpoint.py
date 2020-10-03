@@ -1,7 +1,6 @@
 """For the ones that are too lazy to use git manually."""
 
 from typing import Optional
-import argparse
 import datetime
 import logging
 import os
@@ -76,13 +75,3 @@ def has_commit(repo: git.Repo) -> bool:
         return True
     except ValueError:
         return False
-
-def main(argv):
-    parser = argparse.ArgumentParser()
-    parser.add_argument('path', metavar='PATH', type=str, help='The path to watch')
-    parser.add_argument('--interval', type=int, default=30, help='The refresh interval in seconds')
-    args = parser.parse_args(argv)
-    watch(args.path, args.interval)
-
-if __name__ == '__main__':
-    main(sys.argv[1:])
