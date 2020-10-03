@@ -1,5 +1,8 @@
+"""For the ones that are too lazy to use git manually."""
+
 from typing import Optional
 import datetime
+import os
 import time
 
 import git
@@ -11,9 +14,15 @@ def watch(path: str, init_if_not_exist: bool = True, interval_secs: int = 120):
     repo = get_repo(path, init_if_not_exist)
     while True:
         try:
-            pass
+            for f in repo.untracked_files:
+                if should_track(f):
+                    "git add f"
+            if repo.index.entries:
+                msg = make_commit_message()
+                "git commit -m msg"
         except:
             pass
+
         time.sleep(interval_secs)
 
 def get_repo(path: str, init_if_not_exist=True) -> git.Repo:
@@ -29,5 +38,10 @@ def make_commit_message(now: Optional[datetime.datetime] = None):
         now = datetime.datetime.now()
     return now.strftime('checkpoint at %Y-%m-%d %H:%M:%S')
 
-def has_update(repo: git.Repo) -> bool:
-    pass
+def should_track(subpath: str) -> bool:
+    dir_ = subpath
+    while dir_:
+        dir_, name = os.path.split(subpath)
+        if name.startswith('.') or name.startswith('__'):
+            return False
+    return True
